@@ -6,313 +6,384 @@ from datetime import datetime
 from config import TARGET_IP, GATEWAY_PORT, SENSOR_RANGES
 
 """
-REAL-WORLD IoT ATTACKS FOR MEDICAL SENSOR NETWORKS
+REALISTIC IoT ATTACKS FOR MEDICAL SENSOR NETWORKS
+(Without Attack Labels - IDS Must Detect)
 
-This implements actual IoT attack vectors based on research:
-1. DoS (Denial of Service) - Flooding
-2. Spoofing Attack - Fake sensor data
-3. MITM (Man-in-the-Middle) - Data manipulation
-4. Jamming Attack - Disrupted signals (zeros)
-5. Replay Attack - Replaying old packets
-6. Data Injection - Malicious false data
-7. Resource Exhaustion - Rapid packet bursts
+Attack packets now look like normal sensor traffic.
+Only the IDS model at the collector can detect anomalies.
 
-References:
-- IoT Security in Healthcare (IEEE)
-- Medical IoT Vulnerabilities (ACM CCS)
-- Wireless Body Area Network Attacks
+This simulates real-world scenarios where attackers:
+- Don't announce "I'm attacking!"
+- Try to blend in with normal traffic
+- Use subtle or obvious anomalies
+
+The LSTM Autoencoder IDS must detect these patterns.
 """
 
 
 class IoTAttackInjector:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.attack_id = "ATTACKER"
 
-    def create_attack_packet(self, attack_type, sensor_type, value):
-        """Create malicious packet"""
+    def create_packet(self, sensor_id, sensor_type, value):
+        """
+        Create packet that looks like normal sensor traffic
+        NO attack labels - IDS must detect anomalies
+        """
         packet = {
-            'sensor_id': self.attack_id,
+            'sensor_id': sensor_id,
             'sensor_type': sensor_type,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
             'value': value,
-            'is_attack': 1,
-            'attack_type': attack_type
+            'is_attack': 0,  # Always 0 - sensors don't know they're compromised
+            'attack_type': '-'  # No label - IDS must figure it out
         }
         return packet
 
     def send_packet(self, packet):
-        """Send single malicious packet"""
+        """Send packet to gateway"""
         self.sock.sendto(json.dumps(packet).encode(), (TARGET_IP, GATEWAY_PORT))
 
     # === ATTACK 1: DoS (Denial of Service) - Flooding ===
     def dos_flooding(self, duration=15):
         """
-        Real-world: Attacker floods network with packets to overwhelm system
-        Impact: Network congestion, legitimate packets dropped
+        Real attack: Overwhelm network with excessive packets
+        IDS should detect: Unusual packet rate and random noise patterns
         """
         print("\n" + "=" * 70)
         print("🔴 ATTACK 1: DoS (Denial of Service) - FLOODING")
         print("=" * 70)
-        print("Description: Overwhelming network with excessive packets")
-        print("Real-world scenario: DDoS attack on hospital sensor network")
-        print(f"Duration: {duration}s | Rate: 100 packets/second")
+        print("Simulating: Network flooding with noisy data")
+        print("IDS should detect: High frequency + random value patterns")
+        print(f"Duration: {duration}s | Rate: 50 packets/second")
         print("-" * 70)
 
-        sensor_types = list(SENSOR_RANGES.keys())
+        sensor_configs = [
+            ('S1', 'FHR'),
+            ('S2', 'TOCO'),
+            ('S3', 'SpO2'),
+            ('S4', 'RespRate'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            sensor_type = random.choice(sensor_types)
+            # Flood with noisy, erratic values
+            sensor_id, sensor_type = random.choice(sensor_configs)
             min_val, max_val = SENSOR_RANGES[sensor_type]
-            value = round(random.uniform(min_val, max_val), 2)
 
-            packet = self.create_attack_packet('DoS_Flooding', sensor_type, value)
+            # Add significant noise to create anomalous patterns
+            center = (min_val + max_val) / 2
+            noise = random.uniform(-50, 50)  # Large noise
+            value = round(center + noise, 2)
+
+            packet = self.create_packet(sensor_id, sensor_type, value)
             self.send_packet(packet)
             count += 1
 
-            if count % 100 == 0:
-                print(f"  Sent {count} flooding packets...")
+            if count % 50 == 0:
+                print(f"  Sent {count} flooding packets... (IDS analyzing)")
 
-            time.sleep(0.01)  # 100 packets/sec
+            time.sleep(0.02)  # 50 packets/sec
 
         print(f"✓ Attack complete: {count} packets sent")
+        print("→ Check collector for IDS detections!")
 
-    # === ATTACK 2: Spoofing Attack - Fake Sensor Identity ===
+    # === ATTACK 2: Spoofing Attack - Fake Sensor with Out-of-Range Values ===
     def spoofing_attack(self, duration=15):
         """
-        Real-world: Attacker impersonates legitimate sensor
-        Impact: False data accepted as legitimate, misleading medical decisions
+        Real attack: Impersonate sensor with extreme values
+        IDS should detect: Out-of-range values and unusual patterns
         """
         print("\n" + "=" * 70)
-        print("🔴 ATTACK 2: SPOOFING ATTACK - Fake Sensor Identity")
+        print("🔴 ATTACK 2: SPOOFING ATTACK - Extreme Values")
         print("=" * 70)
-        print("Description: Attacker pretends to be legitimate sensor S1, S2, etc.")
-        print("Real-world scenario: Attacker injects fake heart rate data")
+        print("Simulating: Attacker sending out-of-range sensor values")
+        print("IDS should detect: Values far outside normal distribution")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        sensor_types = list(SENSOR_RANGES.keys())
-        fake_sensor_ids = ['S1', 'S2', 'S3', 'S4', 'S5']
+        sensor_configs = [
+            ('S1', 'FHR'),
+            ('S2', 'TOCO'),
+            ('S3', 'SpO2'),
+            ('S4', 'RespRate'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            # Impersonate random legitimate sensor
-            fake_id = random.choice(fake_sensor_ids)
-            sensor_type = random.choice(sensor_types)
+            sensor_id, sensor_type = random.choice(sensor_configs)
             min_val, max_val = SENSOR_RANGES[sensor_type]
 
-            # Send believable but fake values
-            value = round(random.uniform(min_val, max_val), 2)
+            # Send EXTREME out-of-range values
+            if random.random() < 0.5:
+                value = round(max_val * 1.5, 2)  # 50% above max
+            else:
+                value = round(min_val * 0.5, 2)  # 50% below min
 
-            packet = self.create_attack_packet('Spoofing', sensor_type, value)
-            packet['sensor_id'] = fake_id  # Impersonate legitimate sensor
+            packet = self.create_packet(sensor_id, sensor_type, value)
             self.send_packet(packet)
 
-            print(f"  [{packet['timestamp']}] Spoofed as {fake_id} | {sensor_type}: {value}")
+            print(f"  [{packet['timestamp']}] {sensor_type}: {value} (EXTREME)")
             count += 1
             time.sleep(1)
 
         print(f"✓ Attack complete: {count} spoofed packets sent")
+        print("→ IDS should flag these as ATTACKS!")
 
     # === ATTACK 3: MITM - Data Manipulation ===
     def mitm_data_manipulation(self, duration=15):
         """
-        Real-world: Attacker intercepts and modifies sensor data
-        Impact: Critical values altered, endangering patient safety
+        Real attack: Subtle manipulation of critical sensor values
+        IDS should detect: Unusual temporal patterns and value shifts
         """
         print("\n" + "=" * 70)
         print("🔴 ATTACK 3: MITM (Man-in-the-Middle) - Data Manipulation")
         print("=" * 70)
-        print("Description: Intercepting and modifying sensor readings")
-        print("Real-world scenario: Critical values altered (SpO2, FHR)")
+        print("Simulating: Subtle manipulation of FHR, SpO2, Temp")
+        print("IDS should detect: Abnormal value patterns over time")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        critical_sensors = ['FHR', 'SpO2', 'Temp']
+        # Target critical sensors
+        critical_sensors = [
+            ('S1', 'FHR'),
+            ('S3', 'SpO2'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            sensor_type = random.choice(critical_sensors)
+            sensor_id, sensor_type = random.choice(critical_sensors)
             min_val, max_val = SENSOR_RANGES[sensor_type]
+            center = (min_val + max_val) / 2
 
-            # Manipulate to dangerous values
+            # Manipulate values - shifted but somewhat plausible
             if sensor_type == 'FHR':
-                value = random.choice([50, 220])  # Too low or too high
+                value = round(random.uniform(180, 200), 2)  # High but not impossible
             elif sensor_type == 'SpO2':
-                value = random.randint(70, 85)  # Dangerously low oxygen
+                value = round(random.uniform(88, 93), 2)  # Low oxygen
             else:  # Temp
-                value = random.uniform(39.5, 41.0)  # High fever
+                value = round(random.uniform(38.5, 39.5), 2)  # Fever range
 
-            packet = self.create_attack_packet('MITM_Manipulation', sensor_type, round(value, 2))
+            packet = self.create_packet(sensor_id, sensor_type, value)
             self.send_packet(packet)
 
-            print(f"  [{packet['timestamp']}] MITM Modified | {sensor_type}: {value} (CRITICAL)")
+            print(f"  [{packet['timestamp']}] {sensor_type}: {value} (manipulated)")
             count += 1
             time.sleep(0.8)
 
         print(f"✓ Attack complete: {count} manipulated packets sent")
+        print("→ IDS should detect unusual temporal patterns!")
 
     # === ATTACK 4: Jamming Attack - Signal Disruption ===
     def jamming_attack(self, duration=15):
         """
-        Real-world: RF jamming disrupts wireless sensor signals
-        Impact: Sensors appear offline, zero/null readings
+        Real attack: Wireless jamming causes null/zero readings
+        IDS should detect: Sudden drops to zero or constant values
         """
         print("\n" + "=" * 70)
         print("🔴 ATTACK 4: JAMMING ATTACK - Signal Disruption")
         print("=" * 70)
-        print("Description: RF interference causing null/zero readings")
-        print("Real-world scenario: Wireless jamming device near patient sensors")
+        print("Simulating: RF jamming causing null/zero readings")
+        print("IDS should detect: Sudden drops to zero or flatline")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        sensor_types = list(SENSOR_RANGES.keys())
+        sensor_configs = [
+            ('S1', 'FHR'),
+            ('S2', 'TOCO'),
+            ('S3', 'SpO2'),
+            ('S4', 'RespRate'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            sensor_type = random.choice(sensor_types)
+            sensor_id, sensor_type = random.choice(sensor_configs)
 
-            # Jamming causes null/corrupted readings
-            value = random.choice([0, -1, 999999, None])
-            if value is None:
-                value = 0
+            # Jamming causes zeros or very low constant values
+            value = random.choice([0, 0, 0, 1, -1])  # Mostly zeros
 
-            packet = self.create_attack_packet('Jamming', sensor_type, value)
+            packet = self.create_packet(sensor_id, sensor_type, value)
             self.send_packet(packet)
 
-            print(f"  [{packet['timestamp']}] Jammed Signal | {sensor_type}: {value} (NULL)")
+            print(f"  [{packet['timestamp']}] {sensor_type}: {value} (JAMMED)")
             count += 1
             time.sleep(0.5)
 
         print(f"✓ Attack complete: {count} jammed packets sent")
+        print("→ IDS should detect flatline patterns!")
 
     # === ATTACK 5: Replay Attack ===
     def replay_attack(self, duration=15):
         """
-        Real-world: Attacker captures and replays old legitimate packets
-        Impact: Outdated data confuses system, masks real patient condition
+        Real attack: Replay same values repeatedly
+        IDS should detect: Lack of natural variation, repeated patterns
         """
         print("\n" + "=" * 70)
-        print("🔴 ATTACK 5: REPLAY ATTACK - Old Packet Replay")
+        print("🔴 ATTACK 5: REPLAY ATTACK - Repeated Pattern")
         print("=" * 70)
-        print("Description: Replaying captured legitimate packets repeatedly")
-        print("Real-world scenario: Old 'normal' readings mask deteriorating condition")
+        print("Simulating: Attacker replaying captured 'normal' values")
+        print("IDS should detect: Unnatural repetition and lack of variation")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        # Simulate capturing a "normal" packet
-        captured_packets = []
-        for sensor_type in SENSOR_RANGES.keys():
-            min_val, max_val = SENSOR_RANGES[sensor_type]
-            value = round((min_val + max_val) / 2, 2)  # Normal value
-            captured_packets.append((sensor_type, value))
+        # Capture "normal" values to replay
+        captured_values = {
+            'S1': 145.5,  # FHR
+            'S2': 45.0,  # TOCO
+            'S3': 97.0,  # SpO2
+            'S4': 18.0,  # RespRate
+            'S5': 37.0  # Temp
+        }
+
+        sensor_types = {
+            'S1': 'FHR',
+            'S2': 'TOCO',
+            'S3': 'SpO2',
+            'S4': 'RespRate',
+            'S5': 'Temp'
+        }
 
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            # Replay same old packets
-            sensor_type, value = random.choice(captured_packets)
+            # Keep replaying SAME values (no natural variation)
+            for sensor_id in ['S1', 'S2', 'S3', 'S4', 'S5']:
+                sensor_type = sensor_types[sensor_id]
+                value = captured_values[sensor_id]  # Always same!
 
-            packet = self.create_attack_packet('Replay', sensor_type, value)
-            # Same timestamp to show it's replayed
-            packet['timestamp'] = '2024-12-10 10:00:00.000'  # Old timestamp
-            self.send_packet(packet)
+                packet = self.create_packet(sensor_id, sensor_type, value)
+                self.send_packet(packet)
 
-            print(f"  [REPLAYED OLD] {sensor_type}: {value} (Timestamp: 2024-12-10)")
-            count += 1
-            time.sleep(0.6)
+                print(f"  [REPLAY] {sensor_type}: {value} (repeated)")
+                count += 1
+                time.sleep(0.2)
 
         print(f"✓ Attack complete: {count} replayed packets sent")
+        print("→ IDS should detect lack of natural variation!")
 
-    # === ATTACK 6: Data Injection - False Data ===
+    # === ATTACK 6: Data Injection - Random Burst ===
     def false_data_injection(self, duration=15):
         """
-        Real-world: Injecting completely fabricated sensor readings
-        Impact: Non-existent sensors appear, ghost data in system
+        Real attack: Inject random data bursts
+        IDS should detect: Sudden bursts of random values
         """
         print("\n" + "=" * 70)
-        print("🔴 ATTACK 6: FALSE DATA INJECTION")
+        print("🔴 ATTACK 6: FALSE DATA INJECTION - Random Bursts")
         print("=" * 70)
-        print("Description: Injecting fabricated data from non-existent sensors")
-        print("Real-world scenario: Ghost sensors sending random data")
+        print("Simulating: Injecting random data bursts")
+        print("IDS should detect: Sudden value spikes and random patterns")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        fake_sensor_types = ['FAKE_ECG', 'FAKE_BP', 'FAKE_GLUCOSE', 'FAKE_EEG']
+        sensor_configs = [
+            ('S1', 'FHR'),
+            ('S2', 'TOCO'),
+            ('S3', 'SpO2'),
+            ('S4', 'RespRate'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         count = 0
 
         while time.time() < end_time:
-            fake_type = random.choice(fake_sensor_types)
-            fake_value = round(random.uniform(0, 1000), 2)
+            # Inject bursts of random values
+            sensor_id, sensor_type = random.choice(sensor_configs)
+            min_val, max_val = SENSOR_RANGES[sensor_type]
 
-            packet = self.create_attack_packet('False_Injection', fake_type, fake_value)
-            packet['sensor_id'] = f'GHOST_{count}'
+            # Random values with huge spikes
+            value = round(random.uniform(min_val * 0.3, max_val * 1.8), 2)
+
+            packet = self.create_packet(sensor_id, sensor_type, value)
             self.send_packet(packet)
 
-            print(f"  [{packet['timestamp']}] Ghost Sensor | {fake_type}: {fake_value}")
+            print(f"  [{packet['timestamp']}] Injected | {sensor_type}: {value}")
             count += 1
             time.sleep(0.7)
 
         print(f"✓ Attack complete: {count} false packets injected")
+        print("→ IDS should flag random spikes!")
 
-    # === ATTACK 7: Resource Exhaustion - Burst Attack ===
+    # === ATTACK 7: Resource Exhaustion - Burst Pattern ===
     def resource_exhaustion(self, duration=15):
         """
-        Real-world: Alternating bursts and silence to exhaust resources
-        Impact: Battery drain, processing overload, system instability
+        Real attack: Rapid bursts followed by silence
+        IDS should detect: Unusual burst patterns
         """
         print("\n" + "=" * 70)
         print("🔴 ATTACK 7: RESOURCE EXHAUSTION - Burst Pattern")
         print("=" * 70)
-        print("Description: Rapid bursts followed by silence to drain resources")
-        print("Real-world scenario: Battery exhaustion attack on wireless sensors")
+        print("Simulating: Rapid packet bursts to drain resources")
+        print("IDS should detect: Unusual burst frequency patterns")
         print(f"Duration: {duration}s")
         print("-" * 70)
 
-        sensor_types = list(SENSOR_RANGES.keys())
+        sensor_configs = [
+            ('S1', 'FHR'),
+            ('S2', 'TOCO'),
+            ('S3', 'SpO2'),
+            ('S4', 'RespRate'),
+            ('S5', 'Temp')
+        ]
+
         end_time = time.time() + duration
         total_count = 0
 
         while time.time() < end_time:
-            # Burst phase: Send 50 packets rapidly
-            print("  🔥 BURST PHASE (50 packets in 1 second)...")
-            for _ in range(50):
-                sensor_type = random.choice(sensor_types)
+            # Burst phase: 30 packets rapidly
+            print("  🔥 BURST PHASE (30 packets)...")
+            for _ in range(30):
+                sensor_id, sensor_type = random.choice(sensor_configs)
                 min_val, max_val = SENSOR_RANGES[sensor_type]
-                value = round(random.uniform(min_val, max_val), 2)
+                center = (min_val + max_val) / 2
+                value = round(center + random.uniform(-20, 20), 2)
 
-                packet = self.create_attack_packet('Resource_Exhaustion', sensor_type, value)
+                packet = self.create_packet(sensor_id, sensor_type, value)
                 self.send_packet(packet)
                 total_count += 1
-                time.sleep(0.02)
+                time.sleep(0.03)
 
             # Silence phase
-            print("  💤 Silence phase (3 seconds)...")
-            time.sleep(3)
+            print("  💤 Silence (2 seconds)...")
+            time.sleep(2)
 
         print(f"✓ Attack complete: {total_count} burst packets sent")
+        print("→ IDS should detect burst patterns!")
 
     def interactive_menu(self):
         """Interactive attack selection menu"""
         print("\n" + "=" * 70)
         print("     IoT ATTACK INJECTOR - Medical Sensor Network")
+        print("                  (IDS DETECTION MODE)")
         print("=" * 70)
+        print("\n⚠️  IMPORTANT:")
+        print("   • No attack labels sent (is_attack=0 always)")
+        print("   • Packets look like normal sensor traffic")
+        print("   • Only the IDS model can detect anomalies")
+        print("   • Watch collector console for real-time IDS predictions")
+        print("\n" + "=" * 70)
         print("\nSelect Attack Type:\n")
-        print("  1. DoS Flooding               - Overwhelm network with packets")
-        print("  2. Spoofing Attack            - Impersonate legitimate sensors")
-        print("  3. MITM Data Manipulation     - Alter critical sensor values")
-        print("  4. Jamming Attack             - Signal disruption (null values)")
-        print("  5. Replay Attack              - Replay old captured packets")
-        print("  6. False Data Injection       - Inject ghost sensor data")
-        print("  7. Resource Exhaustion        - Burst pattern attack")
-        print("  8. Run ALL Attacks (Sequence) - Execute all attacks one by one")
+        print("  1. DoS Flooding               - Network flooding with noise")
+        print("  2. Spoofing Attack            - Extreme out-of-range values")
+        print("  3. MITM Data Manipulation     - Subtle value manipulation")
+        print("  4. Jamming Attack             - Zeros/null values (signal loss)")
+        print("  5. Replay Attack              - Repeated values (no variation)")
+        print("  6. False Data Injection       - Random burst patterns")
+        print("  7. Resource Exhaustion        - Rapid burst patterns")
+        print("  8. Run ALL Attacks (Sequence) - Test full IDS capability")
         print("  9. Exit")
         print("\n" + "=" * 70)
 
@@ -336,12 +407,17 @@ class IoTAttackInjector:
 
                 if choice == '8':
                     print("\n🚨 Running ALL attacks in sequence...")
+                    print("   Watch collector console for IDS detections!\n")
                     for name, attack_func in attacks.values():
                         print(f"\n▶️  Starting: {name}")
                         attack_func(duration=10)
                         print("\n⏸️  Waiting 5 seconds before next attack...\n")
                         time.sleep(5)
                     print("\n✅ All attacks completed!")
+                    print("\n📊 Check these for results:")
+                    print("   • Collector console: Real-time IDS predictions")
+                    print("   • Dashboard (localhost:8050): Visual detection graphs")
+                    print("   • data/sensor_data.csv: Full log with IDS predictions")
                     continue
 
                 if choice in attacks:
@@ -349,7 +425,14 @@ class IoTAttackInjector:
                     duration = input(f"Duration in seconds (default 15): ").strip()
                     duration = int(duration) if duration.isdigit() else 15
 
+                    print(f"\n⚡ Launching attack...")
+                    print(f"   → Watch collector console for IDS detections")
+                    print(f"   → Check dashboard at http://localhost:8050\n")
+
                     attack_func(duration=duration)
+
+                    print(f"\n✓ Attack finished!")
+                    print(f"   Check collector console to see how many were detected")
                 else:
                     print("❌ Invalid choice. Please enter 1-9.")
 
@@ -361,12 +444,18 @@ class IoTAttackInjector:
 
 
 if __name__ == "__main__":
-    print("\n🔴 IoT ATTACK INJECTOR FOR MEDICAL SENSOR NETWORKS")
+    print("\n🔴 IoT ATTACK INJECTOR - IDS DETECTION MODE")
     print(f"Target Gateway: {TARGET_IP}:{GATEWAY_PORT}")
-    print(f"\n⚠️  Make sure:")
-    print(f"   1. Gateway is running on target machine")
-    print(f"   2. Firewall allows UDP port {GATEWAY_PORT}")
-    print(f"   3. You can ping {TARGET_IP}\n")
+    print(f"\n✅ Prerequisites:")
+    print(f"   1. ✓ Sensor nodes running (normal traffic)")
+    print(f"   2. ✓ Gateway forwarding packets")
+    print(f"   3. ✓ Collector with IDS active")
+    print(f"   4. ✓ Dashboard at http://localhost:8050")
+    print(f"\n💡 How this works:")
+    print(f"   • All attack packets have is_attack=0 (no labels)")
+    print(f"   • IDS must detect anomalies based on patterns")
+    print(f"   • Watch collector console for 🔴 ATTACK detections")
+    print(f"   • Dashboard shows real-time IDS predictions\n")
 
     injector = IoTAttackInjector()
     injector.interactive_menu()

@@ -5,8 +5,9 @@ import json
 import threading
 from datetime import datetime
 from config import TARGET_IP, GATEWAY_PORT, SENSOR_SEND_INTERVAL, SENSOR_RANGES
-UDP_IP = TARGET_IP  # For compatibility
-UDP_PORT = GATEWAY_PORT  # For compatibility
+
+UDP_IP = TARGET_IP
+UDP_PORT = GATEWAY_PORT
 
 
 class MedicalSensor:
@@ -24,13 +25,14 @@ class MedicalSensor:
         return round(random.uniform(center - variation, center + variation), 2)
 
     def create_packet(self):
-        """Create a data packet"""
+        """Create a data packet (NO attack label - IDS will detect)"""
         packet = {
             'sensor_id': self.sensor_id,
             'sensor_type': self.sensor_type,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
             'value': self.generate_normal_value(),
-            'is_attack': 0  # 0 = normal, 1 = attack
+            'is_attack': 0,  # Always 0 - sensors don't know if they're being attacked
+            'attack_type': '-'  # No attack type from sensors
         }
         return json.dumps(packet)
 
@@ -84,7 +86,8 @@ class SensorNetwork:
         for sensor in self.sensors:
             print(f"  [{sensor.sensor_id}] {sensor.sensor_type:10} | Range: {sensor.min_val}-{sensor.max_val}")
         print("=" * 70)
-        print("\n🟢 All sensors started! Sending data...\n")
+        print("\n🟢 All sensors started! Sending normal data...")
+        print("📡 IDS at collector will detect any anomalies\n")
 
     def start_all(self):
         """Start all sensors in separate threads"""
