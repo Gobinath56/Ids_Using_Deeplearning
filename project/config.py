@@ -12,7 +12,7 @@
 # ============================================================================
 
 # Network Mode: "localhost" or "network"
-NETWORK_MODE = "localhost"  # Change to "network" for cross-machine attacks
+NETWORK_MODE = "network"  # Change to "network" for cross-machine attacks
 
 # For HOST (Windows) - Sensors, Gateway, Collector
 if NETWORK_MODE == "localhost":
@@ -24,7 +24,7 @@ else:
 
     # Target IP for attacker (set this to your Windows IP)
     # CHANGE THIS to your Windows IP from ipconfig!
-    TARGET_IP = "10.142.19.250"    # ← CHANGE THIS!
+    TARGET_IP = "10.125.59.133"    # ← CHANGE THIS!
 
 # Port Configuration
 GATEWAY_PORT = 5005  # Sensors send to Gateway

@@ -47,7 +47,7 @@ class IoTAttackInjector:
     # ==================================================
     # ATTACK 1 — MITM DATA MANIPULATION
     # ==================================================
-    def mitm_attack(self, duration=12):
+    def mitm_attack(self, duration=30):
         print("\n🔴 MITM DATA MANIPULATION ATTACK")
         end = time.time() + duration
         count = 0
@@ -77,7 +77,7 @@ class IoTAttackInjector:
     # ==================================================
     # ATTACK 2 — SPOOFING (WRONG SENSOR TYPE)
     # ==================================================
-    def spoofing_attack(self, duration=12):
+    def spoofing_attack(self, duration=60):
         print("\n🔴 SPOOFING ATTACK")
         end = time.time() + duration
         count = 0
