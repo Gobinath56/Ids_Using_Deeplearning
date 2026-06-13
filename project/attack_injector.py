@@ -44,7 +44,11 @@ class IoTAttackInjector:
     # Each sensor alternates low/high within valid range
     # This fills the 60-sample LSTM window with attack data
     # ==================================================
+<<<<<<< HEAD
     def mitm_attack(self, duration=15):
+=======
+    def mitm_attack(self, duration=30):
+>>>>>>> 0c88d3557b1c333861b2167ac623ece6fe4f3c59
         print("\n🔴 MITM DATA MANIPULATION ATTACK")
         self.send_attack_meta()
 
@@ -81,7 +85,11 @@ class IoTAttackInjector:
     # ATTACK 2 — SPOOFING (WRONG SENSOR TYPE)
     # Strategy: Blast ALL 5 sensors with wrong types rapidly
     # ==================================================
+<<<<<<< HEAD
     def spoofing_attack(self, duration=15):
+=======
+    def spoofing_attack(self, duration=60):
+>>>>>>> 0c88d3557b1c333861b2167ac623ece6fe4f3c59
         print("\n🔴 SPOOFING ATTACK")
         self.send_attack_meta()
 
