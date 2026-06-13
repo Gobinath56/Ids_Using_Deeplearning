@@ -17,9 +17,9 @@ SENDER_EMAIL        = "medical.iot.alert@gmail.com"        # Your Gmail address
 SENDER_PASSWORD     = "lqkuqjmttndaqdvt"         # Gmail App Password (NOT your login password)
                                                     # Get it: Google Account → Security → App Passwords
 RECEIVER_EMAILS = [
-    "johnjoshua2118@gmail.com",
-    "gobinath.t67@gmail.com",
-    "cjoshika1721@gmail.com"
+   # "johnjoshua2118@gmail.com",
+    "gobinath.t67@gmail.com"
+    #"cjoshika1721@gmail.com"
 ]
 # Who receives the alert
 SMTP_SERVER         = "smtp.gmail.com"
@@ -479,6 +479,7 @@ body{background:#0e1117;color:#e6edf3;font-family:Segoe UI;padding:20px}
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px;border-bottom:1px solid #30363d;text-align:center;font-size:13px}
 th{color:#8b949e}
+
 tr.NORMAL{color:#2ea043}
 tr.CALIBRATING,
 tr.CALIBRATING td{
